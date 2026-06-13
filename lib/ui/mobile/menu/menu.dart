@@ -20,7 +20,6 @@ import 'package:flutter/material.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:proxypin/network/bin/server.dart';
 import 'package:proxypin/ui/mobile/mobile.dart';
-import 'package:proxypin/ui/mobile/raw_packet/raw_packet_entry_page.dart';
 import 'package:proxypin/ui/mobile/setting/app_filter.dart';
 import 'package:proxypin/ui/mobile/setting/report_servers.dart';
 import 'package:proxypin/ui/mobile/setting/ssl.dart';
@@ -33,8 +32,9 @@ class MoreMenu extends StatelessWidget {
 
   final ProxyServer proxyServer;
   final ValueNotifier<RemoteModel> remoteDevice;
+  final VoidCallback? onOpenTcp;
 
-  const MoreMenu({super.key, required this.proxyServer, required this.remoteDevice});
+  const MoreMenu({super.key, required this.proxyServer, required this.remoteDevice, this.onOpenTcp});
 
   @override
   Widget build(BuildContext context) {
@@ -96,11 +96,11 @@ class MoreMenu extends StatelessWidget {
                 child: ListTile(
                   dense: true,
                   leading: const Icon(Icons.router_outlined),
-                  title: const Text('TCP/UDP Packets'),
-                  subtitle: const Text('Raw packet capture', style: TextStyle(fontSize: 11)),
+                  title: const Text('TCP/UDP 数据包'),
+                  subtitle: const Text('查看已截获的TCP/UDP数据包', style: TextStyle(fontSize: 11)),
                   onTap: () {
                     Navigator.maybePop(context);
-                    navigator(context, const RawPacketEntryPage());
+                    onOpenTcp?.call();
                   },
                 )),
           const PopupMenuDivider(height: 0),

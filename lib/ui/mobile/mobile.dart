@@ -586,7 +586,11 @@ class _MobileAppBar extends StatelessWidget implements PreferredSizeWidget {
               icon: const Icon(Icons.delete_outline),
               onPressed: () => _onClear(context, localizations)),
           const SizedBox(width: 2),
-          MoreMenu(proxyServer: proxyServer, remoteDevice: remoteDevice),
+          MoreMenu(
+              proxyServer: proxyServer,
+              remoteDevice: remoteDevice,
+              onOpenTcp: () => _selectIndex.value = 0,
+          ),
           const SizedBox(width: 10),
         ]);
   }

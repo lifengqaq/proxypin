@@ -20,7 +20,7 @@ class RawPacketDetailPage extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.copy),
-            tooltip: 'Copy All',
+            tooltip: '复制全部',
             onPressed: () => _copyAll(context),
           ),
         ],
@@ -160,11 +160,11 @@ class RawPacketDetailPage extends StatelessWidget {
                 if (utf8Content != null)
                   IconButton(
                     icon: const Icon(Icons.copy, size: 18),
-                    tooltip: 'Copy Text',
+                    tooltip: '复制文本',
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: utf8Content));
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Text copied')),
+                        const SnackBar(content: Text('已复制')),
                       );
                     },
                   ),
@@ -232,11 +232,11 @@ class RawPacketDetailPage extends StatelessWidget {
                 ),
                 IconButton(
                   icon: const Icon(Icons.copy, size: 18),
-                  tooltip: 'Copy Hex',
+                  tooltip: '复制Hex',
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: packet.hexDump));
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Hex copied')),
+                      const SnackBar(content: Text('已复制')),
                     );
                   },
                 ),
@@ -331,7 +331,7 @@ class RawPacketDetailPage extends StatelessWidget {
 
     Clipboard.setData(ClipboardData(text: buffer.toString()));
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('All info copied')),
+      const SnackBar(content: Text('已复制全部信息')),
     );
   }
 }

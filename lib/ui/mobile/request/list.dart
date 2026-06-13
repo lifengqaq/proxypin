@@ -26,6 +26,7 @@ import 'package:proxypin/ui/component/multi_select_controller.dart';
 import 'package:proxypin/ui/mobile/request/domians.dart';
 import 'package:proxypin/ui/mobile/request/request.dart';
 import 'package:proxypin/ui/mobile/request/request_sequence.dart';
+import 'package:proxypin/ui/mobile/raw_packet/raw_packet_list_page.dart';
 import 'package:proxypin/utils/har.dart';
 import 'package:proxypin/utils/listenable_list.dart';
 import 'package:proxypin/utils/platform.dart';
@@ -51,6 +52,7 @@ class RequestListWidget extends StatefulWidget {
 class RequestListState extends State<RequestListWidget> {
   final GlobalKey<RequestSequenceState> requestSequenceKey = GlobalKey<RequestSequenceState>();
   final GlobalKey<DomainListState> domainListKey = GlobalKey<DomainListState>();
+  final GlobalKey<RawPacketSequenceState> packetSequenceKey = GlobalKey<RawPacketSequenceState>();
 
   //请求列表容器
   ListenableList<HttpRequest> container = ListenableList();
@@ -73,12 +75,17 @@ class RequestListState extends State<RequestListWidget> {
 
   @override
   Widget build(BuildContext context) {
-    List<Widget> tabs = [Tab(child: Text(localizations.sequence)), Tab(child: Text(localizations.domainList))];
+    List<Widget> tabs = [
+      Tab(child: Text(localizations.sequence)),
+      Tab(child: Text(localizations.domainList)),
+      const Tab(child: Text('TCP/UDP')),
+    ];
 
     //double click scroll to top
     var tabClickHandles = [
       DoubleClickHandle(handle: () => requestSequenceKey.currentState?.scrollToTop()),
-      DoubleClickHandle(handle: () => domainListKey.currentState?.scrollToTop())
+      DoubleClickHandle(handle: () => domainListKey.currentState?.scrollToTop()),
+      DoubleClickHandle(handle: () => packetSequenceKey.currentState?.scrollToTop()),
     ];
 
     return DefaultTabController(
@@ -97,6 +104,7 @@ class RequestListState extends State<RequestListWidget> {
                   selectionController: widget.selectionController),
               DomainList(
                   key: domainListKey, list: container, proxyServer: widget.proxyServer, onRemove: domainListRemove),
+              RawPacketSequence(key: packetSequenceKey),
             ],
           ),
         ));
