@@ -17,7 +17,7 @@ class PacketCapturePlugin : AndroidFlutterPlugin() {
     }
 
     private var channel: MethodChannel? = null
-    private var enabled = false
+    private var enabled = true
     private var maxPayloadSize = 4096
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {

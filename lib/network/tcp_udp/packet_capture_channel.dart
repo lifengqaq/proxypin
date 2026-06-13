@@ -3,6 +3,7 @@
  * 接收来自 Android 原生 VPN 层的原始数据包
  */
 
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
@@ -50,10 +51,12 @@ class PacketCaptureChannel {
       final direction = args['direction'] as String? ?? 'outgoing';
       final timestamp = args['timestamp'] as int? ?? DateTime.now().millisecondsSinceEpoch;
 
-      // 解析数据
+      // 解析数据 (原生层通过 Base64 字符串传递)
       Uint8List data;
       final rawData = args['data'];
-      if (rawData is List) {
+      if (rawData is String) {
+        data = base64Decode(rawData);
+      } else if (rawData is List) {
         data = Uint8List.fromList(rawData.cast<int>());
       } else if (rawData is Uint8List) {
         data = rawData;
@@ -73,11 +76,11 @@ class PacketCaptureChannel {
         timestamp: DateTime.fromMillisecondsSinceEpoch(timestamp),
         sequenceNumber: args['sequenceNumber'] as int?,
         ackNumber: args['ackNumber'] as int?,
-        isSyn: args['isSyn'] as bool?,
-        isAck: args['isAck'] as bool?,
-        isFin: args['isFin'] as bool?,
-        isRst: args['isRst'] as bool?,
-        isPsh: args['isPsh'] as bool?,
+        isSyn: args['syn'] as bool?,
+        isAck: args['ack'] as bool?,
+        isFin: args['fin'] as bool?,
+        isRst: args['rst'] as bool?,
+        isPsh: args['psh'] as bool?,
       );
 
       PacketCaptureManager.instance.handleRawPacket(packet);
