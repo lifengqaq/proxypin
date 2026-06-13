@@ -203,7 +203,7 @@ class MobileHomeState extends State<MobileHomePage> implements EventListener, Li
     var navigationView = [
       NavigatorPage(
           navigatorKey: requestPageNavigatorKey,
-          child: RequestPage(proxyServer: proxyServer, appConfiguration: widget.appConfiguration)),
+          child: RequestPage(proxyServer: proxyServer, appConfiguration: widget.appConfiguration, onOpenTcp: () => _selectIndex.value = 0)),
       NavigatorPage(
           navigatorKey: toolboxNavigatorKey,
           child: Scaffold(
@@ -394,8 +394,9 @@ class MobileHomeState extends State<MobileHomePage> implements EventListener, Li
 class RequestPage extends StatefulWidget {
   final ProxyServer proxyServer;
   final AppConfiguration appConfiguration;
+  final VoidCallback? onOpenTcp;
 
-  const RequestPage({super.key, required this.proxyServer, required this.appConfiguration});
+  const RequestPage({super.key, required this.proxyServer, required this.appConfiguration, this.onOpenTcp});
 
   @override
   State<RequestPage> createState() => RequestPageState();
@@ -435,7 +436,7 @@ class RequestPageState extends State<RequestPage> {
   Widget build(BuildContext context) {
     return Stack(children: [
       Scaffold(
-        appBar: _MobileAppBar(widget.appConfiguration, proxyServer, remoteDevice: remoteDevice, onOpenTcp: () => _selectIndex.value = 0),
+        appBar: _MobileAppBar(widget.appConfiguration, proxyServer, remoteDevice: remoteDevice, onOpenTcp: widget.onOpenTcp),
         drawer: widget.appConfiguration.bottomNavigation
             ? null
             : DrawerWidget(proxyServer: proxyServer, container: MobileApp.container),
