@@ -50,6 +50,7 @@ class PacketCapturePlugin : AndroidFlutterPlugin() {
     /**
      * 转发数据包到 Flutter（线程安全，可从任意线程调用）
      */
+    @JvmOverloads
     fun forwardPacket(
         protocol: String,
         sourceIp: String,
