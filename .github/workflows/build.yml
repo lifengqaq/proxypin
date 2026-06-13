@@ -45,7 +45,10 @@ jobs:
           EOF
 
       - name: Install dependencies
-        run: flutter pub get
+        run: |
+          for i in 1 2 3; do
+            flutter pub get && break || sleep 10
+          done
 
       - name: Build APK (release)
         run: flutter build apk --release
@@ -93,7 +96,10 @@ jobs:
           EOF
 
       - name: Install dependencies
-        run: flutter pub get
+        run: |
+          for i in 1 2 3; do
+            flutter pub get && break || sleep 10
+          done
 
       - name: Build appbundle (release)
         run: flutter build appbundle --release
