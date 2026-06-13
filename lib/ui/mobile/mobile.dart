@@ -435,7 +435,7 @@ class RequestPageState extends State<RequestPage> {
   Widget build(BuildContext context) {
     return Stack(children: [
       Scaffold(
-        appBar: _MobileAppBar(widget.appConfiguration, proxyServer, remoteDevice: remoteDevice),
+        appBar: _MobileAppBar(widget.appConfiguration, proxyServer, remoteDevice: remoteDevice, onOpenTcp: () => _selectIndex.value = 0),
         drawer: widget.appConfiguration.bottomNavigation
             ? null
             : DrawerWidget(proxyServer: proxyServer, container: MobileApp.container),
@@ -550,7 +550,9 @@ class _MobileAppBar extends StatelessWidget implements PreferredSizeWidget {
   final ProxyServer proxyServer;
   final ValueNotifier<RemoteModel> remoteDevice;
 
-  const _MobileAppBar(this.appConfiguration, this.proxyServer, {required this.remoteDevice});
+  final VoidCallback? onOpenTcp;
+
+  const _MobileAppBar(this.appConfiguration, this.proxyServer, {required this.remoteDevice, this.onOpenTcp});
 
   Future<void> _onClear(BuildContext context, AppLocalizations localizations) async {
     if (!appConfiguration.clearConfirm) {
@@ -589,7 +591,7 @@ class _MobileAppBar extends StatelessWidget implements PreferredSizeWidget {
           MoreMenu(
               proxyServer: proxyServer,
               remoteDevice: remoteDevice,
-              onOpenTcp: () => _selectIndex.value = 0,
+              onOpenTcp: onOpenTcp,
           ),
           const SizedBox(width: 10),
         ]);

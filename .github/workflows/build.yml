@@ -50,6 +50,17 @@ jobs:
             flutter pub get && break || sleep 10
           done
 
+      - name: Cache NDK & Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            /usr/local/lib/android/sdk/ndk
+          key: android-${{ runner.os }}-ndk27-${{ hashFiles('android/**/*.gradle*', 'android/gradle.properties') }}
+          restore-keys: |
+            android-${{ runner.os }}-ndk27-
+
       - name: Build APK (release)
         run: flutter build apk --release
 
@@ -100,6 +111,17 @@ jobs:
           for i in 1 2 3; do
             flutter pub get && break || sleep 10
           done
+
+      - name: Cache NDK & Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            /usr/local/lib/android/sdk/ndk
+          key: android-${{ runner.os }}-ndk27-${{ hashFiles('android/**/*.gradle*', 'android/gradle.properties') }}
+          restore-keys: |
+            android-${{ runner.os }}-ndk27-
 
       - name: Build appbundle (release)
         run: flutter build appbundle --release
