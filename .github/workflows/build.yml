@@ -10,7 +10,7 @@ on:
 jobs:
   build-android:
     runs-on: ubuntu-latest
-    name: Android APK (Release)
+    name: Android APK
     if: github.event_name != 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4
@@ -61,18 +61,18 @@ jobs:
           restore-keys: |
             android-${{ runner.os }}-ndk27-
 
-      - name: Build APK (release)
+      - name: Build APK
         run: flutter build apk --release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: proxypin-android-release
+          name: proxypin-android
           path: build/app/outputs/flutter-apk/app-release.apk
 
   build-android-release:
     runs-on: ubuntu-latest
-    name: Android AAB (Release)
+    name: Android AAB
     if: github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4
@@ -123,11 +123,11 @@ jobs:
           restore-keys: |
             android-${{ runner.os }}-ndk27-
 
-      - name: Build appbundle (release)
+      - name: Build AAB
         run: flutter build appbundle --release
 
       - name: Upload AAB
         uses: actions/upload-artifact@v4
         with:
-          name: proxypin-android-release
+          name: proxypin-android-aab
           path: build/app/outputs/bundle/release/app-release.aab
