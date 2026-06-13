@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:proxypin/network/tcp_udp/dex_parser.dart';
 import 'package:proxypin/network/tcp_udp/raw_packet.dart';
 
 /// TCP/UDP 数据包详情页面
@@ -38,8 +39,76 @@ class RawPacketDetailPage extends StatelessWidget {
           
           // Hex Dump
           _buildHexDumpCard(theme, context),
+
+          // DEX 解析
+          if (DexParser.isDex(packet.data)) _buildDexCard(theme),
         ],
       ),
+    );
+  }
+
+  Widget _buildDexCard(ThemeData theme) {
+    final dexInfo = DexParser.parse(packet.data);
+    if (!dexInfo.valid) {
+      return Card(
+        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text('DEX Parse Error: ${dexInfo.error}', style: const TextStyle(color: Colors.red)),
+        ),
+      );
+    }
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('DEX Header', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            _buildInfoRow('Version', dexInfo.version ?? '?'),
+            _buildInfoRow('File Size', '${dexInfo.fileSize} bytes'),
+            _buildInfoRow('Strings', '${dexInfo.stringCount}'),
+            _buildInfoRow('Types', '${dexInfo.typeCount}'),
+            _buildInfoRow('Protos', '${dexInfo.protoCount}'),
+            _buildInfoRow('Fields', '${dexInfo.fieldCount}'),
+            _buildInfoRow('Methods', '${dexInfo.methodCount}'),
+            _buildInfoRow('Classes', '${dexInfo.classes.length}'),
+            const SizedBox(height: 12),
+            if (dexInfo.classes.isNotEmpty) ...[
+              Text('Classes', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              ...dexInfo.classes.take(200).map((c) => _buildClassTile(theme, c)),
+              if (dexInfo.classes.length > 200)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text('... and ${dexInfo.classes.length - 200} more',
+                      style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildClassTile(ThemeData theme, DexClass cls) {
+    return ExpansionTile(
+      dense: true,
+      tilePadding: EdgeInsets.zero,
+      title: Text(cls.name, style: const TextStyle(fontSize: 13, fontFamily: 'monospace')),
+      subtitle: Text('${cls.methodCount} methods', style: const TextStyle(fontSize: 11)),
+      children: cls.methods.take(50).map((m) => ListTile(
+        dense: true,
+        visualDensity: const VisualDensity(vertical: -4),
+        title: Text(m.name, style: const TextStyle(fontSize: 12, fontFamily: 'monospace')),
+        subtitle: Text(m.returnType, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+        trailing: m.parameters.isNotEmpty
+            ? Text('(${m.parameters.join(', ')})', style: const TextStyle(fontSize: 10, color: Colors.teal))
+            : const Text('()', style: TextStyle(fontSize: 10, color: Colors.teal)),
+      )).toList(),
     );
   }
 
