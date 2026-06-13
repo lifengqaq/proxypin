@@ -20,6 +20,7 @@ import 'package:flutter/material.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:proxypin/network/bin/server.dart';
 import 'package:proxypin/ui/mobile/mobile.dart';
+import 'package:proxypin/ui/mobile/raw_packet/raw_packet_entry_page.dart';
 import 'package:proxypin/ui/mobile/setting/app_filter.dart';
 import 'package:proxypin/ui/mobile/setting/report_servers.dart';
 import 'package:proxypin/ui/mobile/setting/ssl.dart';
@@ -89,6 +90,19 @@ class MoreMenu extends StatelessWidget {
                   navigator(context, const ReportServersPageMobile());
                 },
               )),
+          if (Platform.isAndroid)
+            PopupMenuItem(
+                height: 32,
+                child: ListTile(
+                  dense: true,
+                  leading: const Icon(Icons.router_outlined),
+                  title: const Text('TCP/UDP Packets'),
+                  subtitle: const Text('Raw packet capture', style: TextStyle(fontSize: 11)),
+                  onTap: () {
+                    Navigator.maybePop(context);
+                    navigator(context, const RawPacketEntryPage());
+                  },
+                )),
           const PopupMenuDivider(height: 0),
           PopupMenuItem(
               height: 32,

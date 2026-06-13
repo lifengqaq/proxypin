@@ -28,6 +28,8 @@ import 'package:proxypin/native/vpn.dart';
 import 'package:proxypin/network/bin/configuration.dart';
 import 'package:proxypin/network/bin/listener.dart';
 import 'package:proxypin/network/bin/server.dart';
+import 'package:proxypin/network/tcp_udp/packet_capture_channel.dart';
+import 'package:proxypin/network/tcp_udp/packet_capture_manager.dart';
 import 'package:proxypin/network/channel/channel.dart';
 import 'package:proxypin/network/channel/channel_context.dart';
 import 'package:proxypin/network/http/http.dart';
@@ -122,6 +124,13 @@ class MobileHomeState extends State<MobileHomePage> implements EventListener, Li
   @override
   void initState() {
     super.initState();
+
+    // 初始化 TCP/UDP 数据包捕获
+    if (Platform.isAndroid) {
+      PacketCaptureChannel.initialize();
+      PacketCaptureManager.instance.enable();
+      PacketCaptureChannel.setCaptureEnabled(true);
+    }
 
     AppLifecycleBinding.instance.addListener(this);
     proxyServer = ProxyServer(widget.configuration);
