@@ -13,6 +13,7 @@ import io.flutter.plugin.common.MethodChannel
 class PacketCapturePlugin : AndroidFlutterPlugin() {
     companion object {
         const val CHANNEL = "com.proxy/packetCapture"
+        @JvmStatic
         var instance: PacketCapturePlugin? = null
             private set
     }

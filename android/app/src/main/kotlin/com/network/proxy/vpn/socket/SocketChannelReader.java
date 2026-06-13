@@ -4,12 +4,14 @@ import androidx.annotation.NonNull;
 
 import android.util.Log;
 
+import com.network.proxy.plugin.PacketCapturePlugin;
 import com.network.proxy.vpn.Connection;
 import com.network.proxy.vpn.TagKt;
 import com.network.proxy.vpn.transport.protocol.IP4Header;
 import com.network.proxy.vpn.transport.protocol.TCPHeader;
 import com.network.proxy.vpn.transport.protocol.TCPPacketFactory;
 import com.network.proxy.vpn.transport.protocol.UDPPacketFactory;
+import com.network.proxy.vpn.util.PacketUtil;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -147,6 +149,16 @@ class SocketChannelReader {
 
         byte[] packetBody = connection.getReceivedData(max);
         if (packetBody != null && packetBody.length > 0) {
+            // 转发入站 TCP 数据到 Flutter
+            PacketCapturePlugin plugin = PacketCapturePlugin.getInstance();
+            if (plugin != null) {
+                plugin.forwardPacket(
+                    "TCP",
+                    PacketUtil.INSTANCE.intToIPAddress(ipHeader.getDestinationIP()), tcpheader.getDestinationPort(),
+                    PacketUtil.INSTANCE.intToIPAddress(ipHeader.getSourceIP()), tcpheader.getSourcePort(),
+                    "incoming", packetBody
+                );
+            }
             long unAck = connection.getSendNext();
             long nextUnAck = connection.getSendNext() + packetBody.length;
             connection.setSendNext((int) nextUnAck);
@@ -192,6 +204,17 @@ class SocketChannelReader {
                     //create UDP packet
                     byte[] data = new byte[len];
                     System.arraycopy(buffer.array(), 0, data, 0, len);
+                    // 转发入站 UDP 数据到 Flutter
+                    PacketCapturePlugin plugin = PacketCapturePlugin.getInstance();
+                    if (plugin != null) {
+                        IP4Header ipH = connection.getLastIpHeader();
+                        plugin.forwardPacket(
+                            "UDP",
+                            PacketUtil.INSTANCE.intToIPAddress(ipH.getDestinationIP()), connection.getLastUdpHeader().getDestinationPort(),
+                            PacketUtil.INSTANCE.intToIPAddress(ipH.getSourceIP()), connection.getLastUdpHeader().getSourcePort(),
+                            "incoming", data
+                        );
+                    }
                     byte[] packetData = UDPPacketFactory.createResponsePacket(
                             connection.getLastIpHeader(), connection.getLastUdpHeader(), data);
 
