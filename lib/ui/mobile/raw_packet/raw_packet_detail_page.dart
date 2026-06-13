@@ -34,10 +34,10 @@ class RawPacketDetailPage extends StatelessWidget {
           if (isTcp) _buildTcpInfoCard(theme),
           
           // 数据内容
-          _buildDataCard(theme),
+          _buildDataCard(theme, context),
           
           // Hex Dump
-          _buildHexDumpCard(theme),
+          _buildHexDumpCard(theme, context),
         ],
       ),
     );
@@ -138,7 +138,7 @@ class RawPacketDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildDataCard(ThemeData theme) {
+  Widget _buildDataCard(ThemeData theme, BuildContext context) {
     final utf8Content = packet.utf8Content;
     
     return Card(
@@ -213,7 +213,7 @@ class RawPacketDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildHexDumpCard(ThemeData theme) {
+  Widget _buildHexDumpCard(ThemeData theme, BuildContext context) {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: Padding(

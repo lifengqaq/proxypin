@@ -86,7 +86,7 @@ class _RawPacketListPageState extends State<RawPacketListPage> with AutomaticKee
           child: _packets.isEmpty
               ? Center(
                   child: Text(
-                    localizations.noData,
+                    localizations.emptyData,
                     style: const TextStyle(color: Colors.grey),
                   ),
                 )
