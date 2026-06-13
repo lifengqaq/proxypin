@@ -58,6 +58,7 @@ class PacketCapturePlugin : AndroidFlutterPlugin() {
         maxLen: Int = maxPayloadSize,
         seqNum: Long? = null,
         ackNum: Long? = null,
+        ack: Boolean? = null,
         syn: Boolean? = null,
         fin: Boolean? = null,
         rst: Boolean? = null,
@@ -80,7 +81,7 @@ class PacketCapturePlugin : AndroidFlutterPlugin() {
             "sequenceNumber" to seqNum?.toInt(),
             "ackNumber" to ackNum?.toInt(),
             "syn" to syn,
-            "ack" to ack,
+            "ack" to ackNum,
             "fin" to fin,
             "rst" to rst,
             "psh" to psh

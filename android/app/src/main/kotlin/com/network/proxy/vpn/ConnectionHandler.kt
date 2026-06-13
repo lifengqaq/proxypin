@@ -79,8 +79,8 @@ class ConnectionHandler(
         clientPacketData.position(pos)
         PacketCapturePlugin.instance?.forwardPacket(
             "UDP",
-            PacketUtil.intToIPAddress(ipHeader.sourceIP), udpHeader.sourcePort,
-            PacketUtil.intToIPAddress(ipHeader.destinationIP), udpHeader.destinationPort,
+            intToIPAddress(ipHeader.sourceIP), udpHeader.sourcePort,
+            intToIPAddress(ipHeader.destinationIP), udpHeader.destinationPort,
             "outgoing", payload
         )
         var connection = manager.getConnection(
@@ -297,11 +297,12 @@ class ConnectionHandler(
             clientPacketData.position(pos)
             PacketCapturePlugin.instance?.forwardPacket(
                 "TCP",
-                PacketUtil.intToIPAddress(sourceIP), sourcePort,
-                PacketUtil.intToIPAddress(destinationIP), destinationPort,
+                intToIPAddress(sourceIP), sourcePort,
+                intToIPAddress(destinationIP), destinationPort,
                 "outgoing", payload,
                 seqNum = tcpHeader.sequenceNumber,
                 ackNum = tcpHeader.ackNumber,
+                ack = tcpHeader.isACK(),
                 syn = tcpHeader.isSYN(),
                 fin = tcpHeader.isFIN(),
                 rst = tcpHeader.isRST(),
