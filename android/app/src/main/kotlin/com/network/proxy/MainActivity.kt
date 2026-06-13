@@ -7,6 +7,7 @@ import com.network.proxy.plugin.InstalledAppsPlugin
 import com.network.proxy.plugin.PacketCapturePlugin
 import com.network.proxy.plugin.PictureInPicturePlugin
 import com.network.proxy.plugin.ProcessInfoPlugin
+import com.network.proxy.plugin.TransparentProxyPlugin
 import com.network.proxy.plugin.VpnServicePlugin
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -39,6 +40,7 @@ class MainActivity : FlutterActivity() {
     private fun pluginRegister(flutterEngine: FlutterEngine) {
         flutterEngine.plugins.add(VpnServicePlugin())
         flutterEngine.plugins.add(PacketCapturePlugin())
+        flutterEngine.plugins.add(TransparentProxyPlugin())
         flutterEngine.plugins.add(PictureInPicturePlugin())
         flutterEngine.plugins.add(lifecycleChannel)
         flutterEngine.plugins.add(InstalledAppsPlugin())

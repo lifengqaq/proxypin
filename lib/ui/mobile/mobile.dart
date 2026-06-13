@@ -30,6 +30,7 @@ import 'package:proxypin/network/bin/listener.dart';
 import 'package:proxypin/network/bin/server.dart';
 import 'package:proxypin/network/tcp_udp/packet_capture_channel.dart';
 import 'package:proxypin/network/tcp_udp/packet_capture_manager.dart';
+import 'package:proxypin/network/transparent/transparent_proxy.dart';
 import 'package:proxypin/network/channel/channel.dart';
 import 'package:proxypin/network/channel/channel_context.dart';
 import 'package:proxypin/network/http/http.dart';
@@ -136,6 +137,10 @@ class MobileHomeState extends State<MobileHomePage> implements EventListener, Li
     proxyServer = ProxyServer(widget.configuration);
     proxyServer.addListener(this);
     proxyServer.start();
+
+    // 尝试启动透明代理（root + iptables，无需 VPN）
+    TransparentProxy.start(proxyPort: proxyServer.port);
+
     _remoteHistorySubscription = HistoryStorage.onRemoteImported.listen((item) => _openHistoryPage(item));
 
     if (widget.appConfiguration.upgradeNoticeV28) {
@@ -168,6 +173,7 @@ class MobileHomeState extends State<MobileHomePage> implements EventListener, Li
 
   @override
   void dispose() {
+    TransparentProxy.stop();
     AppLifecycleBinding.instance.removeListener(this);
     _remoteHistorySubscription?.cancel();
     super.dispose();
