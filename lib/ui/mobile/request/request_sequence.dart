@@ -194,9 +194,9 @@ class RequestSequenceState extends State<RequestSequence> with AutomaticKeepAliv
     }
     showConfirmDialog(context, content: '${localizations.delete} ${selected.length} ${localizations.request}?',
         onConfirm: () {
-      final removedRequestIds = selected.map((request) => request.requestId).toSet();
+      final removedRequestIds = selected.map((r) => r.requestId).toSet();
       setState(() {
-        view.removeWhere((request) => removedRequestIds.contains(request.requestId));
+        view.removeWhere((item) => item is HttpTraffic && removedRequestIds.contains(item.request.requestId));
         indexes.removeWhere((requestId, _) => removedRequestIds.contains(requestId));
         selectionController.clear();
         widget.onRemove?.call(selected);
@@ -285,7 +285,7 @@ class RequestSequenceState extends State<RequestSequence> with AutomaticKeepAliv
                               onRepeatSelected: repeatSelected),
                           onRemove: (item) {
                             setState(() {
-                              view.remove(item);
+                              view.removeWhere((e) => e is HttpTraffic && e.request == item);
                               indexes.remove(requestId);
                             });
                             selectionController.remove(request.requestId);
