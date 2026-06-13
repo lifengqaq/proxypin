@@ -59,7 +59,7 @@ jobs:
     needs: build-android
     runs-on: ubuntu-latest
     name: Android AAB (Release)
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4
 
