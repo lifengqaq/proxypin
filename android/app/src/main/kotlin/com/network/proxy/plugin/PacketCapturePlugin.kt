@@ -1,7 +1,8 @@
 package com.network.proxy.plugin
 
+import android.os.Handler
+import android.os.Looper
 import android.util.Base64
-import com.network.proxy.vpn.util.PacketUtil
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodChannel
 
@@ -19,6 +20,7 @@ class PacketCapturePlugin : AndroidFlutterPlugin() {
     private var channel: MethodChannel? = null
     private var enabled = true
     private var maxPayloadSize = 4096
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         instance = this
@@ -45,7 +47,7 @@ class PacketCapturePlugin : AndroidFlutterPlugin() {
     }
 
     /**
-     * 转发数据包到 Flutter
+     * 转发数据包到 Flutter（线程安全，可从任意线程调用）
      */
     fun forwardPacket(
         protocol: String,
@@ -66,25 +68,30 @@ class PacketCapturePlugin : AndroidFlutterPlugin() {
     ) {
         if (!enabled || channel == null) return
 
+        val ch = channel!!
         val payloadSize = minOf(data.size, maxLen)
         val payload = if (data.size > maxLen) data.copyOf(maxLen) else data
+        val payloadB64 = Base64.encodeToString(payload, Base64.NO_WRAP)
 
-        channel?.invokeMethod("onPacket", mapOf(
-            "protocol" to protocol,
-            "sourceIp" to sourceIp,
-            "sourcePort" to sourcePort,
-            "destIp" to destIp,
-            "destPort" to destPort,
-            "direction" to direction,
-            "data" to Base64.encodeToString(payload, Base64.NO_WRAP),
-            "timestamp" to System.currentTimeMillis(),
-            "sequenceNumber" to seqNum?.toInt(),
-            "ackNumber" to ackNum?.toInt(),
-            "syn" to syn,
-            "ack" to ackNum,
-            "fin" to fin,
-            "rst" to rst,
-            "psh" to psh
-        ))
+        // MethodChannel 必须在主线程调用
+        mainHandler.post {
+            ch.invokeMethod("onPacket", mapOf(
+                "protocol" to protocol,
+                "sourceIp" to sourceIp,
+                "sourcePort" to sourcePort,
+                "destIp" to destIp,
+                "destPort" to destPort,
+                "direction" to direction,
+                "data" to payloadB64,
+                "timestamp" to System.currentTimeMillis(),
+                "sequenceNumber" to seqNum?.toInt(),
+                "ackNumber" to ackNum?.toInt(),
+                "syn" to syn,
+                "ack" to ack,
+                "fin" to fin,
+                "rst" to rst,
+                "psh" to psh
+            ))
+        }
     }
 }
