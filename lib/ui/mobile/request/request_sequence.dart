@@ -9,10 +9,13 @@ import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:proxypin/network/bin/server.dart';
 import 'package:proxypin/network/http/http.dart';
 import 'package:proxypin/network/http/http_client.dart';
+import 'package:proxypin/network/tcp_udp/raw_packet.dart';
+import 'package:proxypin/network/traffic_item.dart';
 import 'package:proxypin/ui/component/multi_select_controller.dart';
 import 'package:proxypin/ui/component/selection_action_bar.dart';
 import 'package:proxypin/ui/component/utils.dart';
 import 'package:proxypin/ui/desktop/request/request.dart';
+import 'package:proxypin/ui/mobile/raw_packet/raw_packet_detail_page.dart';
 import 'package:proxypin/ui/mobile/request/request.dart';
 import 'package:proxypin/utils/har.dart';
 import 'package:proxypin/utils/keyword_highlight.dart';
@@ -52,8 +55,8 @@ class RequestSequenceState extends State<RequestSequence> with AutomaticKeepAliv
   Map<String, GlobalKey<RequestRowState>> indexes = HashMap();
   late final MultiSelectListener<String> selectionListener;
 
-  ///显示的请求列表 最新的在前面
-  Queue<HttpRequest> view = Queue();
+  ///显示的请求/数据包列表 最新的在前面
+  Queue<TrafficItem> view = Queue();
   bool changing = false;
 
   bool sortDesc = true;
@@ -72,7 +75,7 @@ class RequestSequenceState extends State<RequestSequence> with AutomaticKeepAliv
   void initState() {
     super.initState();
     sortDesc = widget.sortDesc ?? true;
-    view.addAll(widget.container.source.reversed);
+    view.addAll(widget.container.source.reversed.map((r) => HttpTraffic(r)));
     selectionListener = MultiSelectListener((items) {
       if (!mounted) {
         return;
@@ -104,12 +107,23 @@ class RequestSequenceState extends State<RequestSequence> with AutomaticKeepAliv
       return;
     }
 
+    final item = HttpTraffic(request);
     if (sortDesc) {
-      view.addFirst(request);
+      view.addFirst(item);
     } else {
-      view.addLast(request);
+      view.addLast(item);
     }
 
+    changeState();
+  }
+
+  ///添加 TCP/UDP 数据包
+  void addPacket(RawPacket packet) {
+    if (sortDesc) {
+      view.addFirst(PacketTraffic(packet));
+    } else {
+      view.addLast(PacketTraffic(packet));
+    }
     changeState();
   }
 
@@ -122,10 +136,11 @@ class RequestSequenceState extends State<RequestSequence> with AutomaticKeepAliv
       return;
     }
 
+    final request = response.request!;
     //搜索视图
-    if (searchModel?.filter(response.request!, response) == true && state == null) {
-      if (!view.contains(response.request)) {
-        view.addFirst(response.request!);
+    if (searchModel?.filter(request, response) == true && state == null) {
+      if (!view.any((item) => item is HttpTraffic && item.request == request)) {
+        view.addFirst(HttpTraffic(request));
         changeState();
       }
     }
@@ -137,35 +152,39 @@ class RequestSequenceState extends State<RequestSequence> with AutomaticKeepAliv
       view.clear();
       indexes.clear();
 
-      view.addAll(widget.container.source.reversed);
+      view.addAll(widget.container.source.reversed.map((r) => HttpTraffic(r)));
     });
   }
 
   void remove(List<HttpRequest> list) {
-    final removedRequestIds = list.map((request) => request.requestId).toList();
+    final removedRequestIds = list.map((r) => r.requestId).toSet();
     setState(() {
-      view.removeWhere((element) => list.contains(element));
+      view.removeWhere((item) => item is HttpTraffic && list.contains(item.request));
       for (final requestId in removedRequestIds) {
         indexes.remove(requestId);
       }
     });
-    selectionController.prune(view.map((request) => request.requestId));
+    selectionController.prune(view.map((item) => item.id));
   }
 
-  ///过滤
+  ///过滤 (仅 HTTP 请求)
   void search(SearchModel searchModel) {
     this.searchModel = searchModel;
     if (searchModel.isEmpty) {
-      view = Queue.of(widget.container.source.reversed);
+      view = Queue.of(widget.container.source.reversed.map((r) => HttpTraffic(r)));
     } else {
-      view = Queue.of(widget.container.where((it) => searchModel.filter(it, it.response)).toList().reversed);
+      view = Queue.of(widget.container
+          .where((it) => searchModel.filter(it, it.response))
+          .map((r) => HttpTraffic(r))
+          .toList()
+          .reversed);
     }
-    selectionController.prune(view.map((request) => request.requestId));
+    selectionController.prune(view.map((item) => item.id));
     changeState();
   }
 
   Iterable<HttpRequest> currentView() {
-    return view;
+    return view.whereType<HttpTraffic>().map((item) => item.request);
   }
 
   void deleteSelected() {
@@ -195,7 +214,11 @@ class RequestSequenceState extends State<RequestSequence> with AutomaticKeepAliv
       return [];
     }
 
-    return view.where((request) => selectedIds.contains(request.requestId)).toList();
+    return view
+        .whereType<HttpTraffic>()
+        .where((item) => selectedIds.contains(item.request.requestId))
+        .map((item) => item.request)
+        .toList();
   }
 
   void changeState() {
@@ -237,7 +260,13 @@ class RequestSequenceState extends State<RequestSequence> with AutomaticKeepAliv
                         Divider(thickness: 0.2, height: 0, color: Theme.of(context).dividerColor),
                     itemCount: view.length,
                     itemBuilder: (context, index) {
-                      final request = view.elementAt(index);
+                      final item = view.elementAt(index);
+
+                      if (item is PacketTraffic) {
+                        return _buildPacketRow(item.packet, index);
+                      }
+
+                      final request = (item as HttpTraffic).request;
                       final requestId = request.requestId;
 
                       final key = GlobalKey<RequestRowState>();
@@ -265,6 +294,84 @@ class RequestSequenceState extends State<RequestSequence> with AutomaticKeepAliv
                     })))
       ]);
     });
+  }
+
+  Widget _buildPacketRow(RawPacket packet, int index) {
+    final isTcp = packet.protocol == PacketProtocol.TCP;
+    final isOutgoing = packet.direction == PacketDirection.outgoing;
+
+    return ListTile(
+      visualDensity: const VisualDensity(vertical: -4),
+      minLeadingWidth: 5,
+      leading: Container(
+        width: 40,
+        height: 24,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isTcp ? Colors.blue.shade50 : Colors.green.shade50,
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(
+            color: isTcp ? Colors.blue.shade200 : Colors.green.shade200,
+            width: 0.5,
+          ),
+        ),
+        child: Text(
+          isTcp ? 'TCP' : 'UDP',
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            color: isTcp ? Colors.blue.shade700 : Colors.green.shade700,
+          ),
+        ),
+      ),
+      title: Row(
+        children: [
+          Icon(
+            isOutgoing ? Icons.arrow_upward : Icons.arrow_downward,
+            size: 14,
+            color: isOutgoing ? Colors.orange : Colors.purple,
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              '${packet.sourceIp}:${packet.sourcePort} → ${packet.destIp}:${packet.destPort}',
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 13),
+            ),
+          ),
+        ],
+      ),
+      subtitle: Text.rich(
+        TextSpan(children: [
+          TextSpan(
+            text: _fmtTime(packet.timestamp),
+            style: TextStyle(fontSize: 11, color: Colors.teal.shade400),
+          ),
+          TextSpan(
+            text: '  ${_fmtSize(packet.size)}',
+            style: const TextStyle(fontSize: 11, color: Colors.grey),
+          ),
+        ]),
+      ),
+      trailing: const Icon(Icons.chevron_right, size: 18, color: Colors.grey),
+      contentPadding: const EdgeInsets.only(left: 8, right: 5),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => RawPacketDetailPage(packet: packet)),
+        );
+      },
+    );
+  }
+
+  String _fmtSize(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    return '${(bytes / 1024 / 1024).toStringAsFixed(1)} MB';
+  }
+
+  String _fmtTime(DateTime time) {
+    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}:${time.second.toString().padLeft(2, '0')}.${time.millisecond.toString().padLeft(3, '0')}';
   }
 
   void scrollToTop() {

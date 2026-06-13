@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -22,20 +23,17 @@ import 'package:proxypin/network/bin/server.dart';
 import 'package:proxypin/network/channel/channel.dart';
 import 'package:proxypin/network/channel/channel_context.dart';
 import 'package:proxypin/network/http/http.dart';
+import 'package:proxypin/network/tcp_udp/packet_capture_manager.dart';
 import 'package:proxypin/ui/component/multi_select_controller.dart';
 import 'package:proxypin/ui/mobile/request/domians.dart';
 import 'package:proxypin/ui/mobile/request/request.dart';
 import 'package:proxypin/ui/mobile/request/request_sequence.dart';
-import 'package:proxypin/ui/mobile/raw_packet/raw_packet_list_page.dart';
 import 'package:proxypin/utils/har.dart';
 import 'package:proxypin/utils/listenable_list.dart';
 import 'package:proxypin/utils/platform.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../component/model/search_model.dart';
-
-/// 请求列表内部 Tab 切换通知
-final ValueNotifier<int> tabNotifier = ValueNotifier(0);
 
 /// 请求列表
 /// @author wanghongen
@@ -52,66 +50,53 @@ class RequestListWidget extends StatefulWidget {
   }
 }
 
-class RequestListState extends State<RequestListWidget> with SingleTickerProviderStateMixin {
+class RequestListState extends State<RequestListWidget> {
   final GlobalKey<RequestSequenceState> requestSequenceKey = GlobalKey<RequestSequenceState>();
   final GlobalKey<DomainListState> domainListKey = GlobalKey<DomainListState>();
-  final GlobalKey<RawPacketSequenceState> packetSequenceKey = GlobalKey<RawPacketSequenceState>();
 
   //请求列表容器
   ListenableList<HttpRequest> container = ListenableList();
 
-  late final TabController _tabController;
-  VoidCallback? _tabListener;
+  StreamSubscription? _packetSub;
 
   AppLocalizations get localizations => AppLocalizations.of(context)!;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
     if (widget.list != null) {
       container = widget.list!;
     }
-    _tabListener = () {
-      final target = tabNotifier.value;
-      if (target >= 0 && target < 3 && _tabController.index != target) {
-        _tabController.animateTo(target);
-      }
-    };
-    tabNotifier.addListener(_tabListener!);
+    // TCP/UDP 数据包接入请求序列
+    _packetSub = PacketCaptureManager.instance.packetStream.listen((packet) {
+      requestSequenceKey.currentState?.addPacket(packet);
+    });
   }
 
   @override
   void dispose() {
-    if (_tabListener != null) {
-      tabNotifier.removeListener(_tabListener!);
-    }
-    _tabController.dispose();
+    _packetSub?.cancel();
     RequestRowState.removeAutoReadByIds(container.map((request) => request.requestId));
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    List<Widget> tabs = [
-      Tab(child: Text(localizations.sequence)),
-      Tab(child: Text(localizations.domainList)),
-      const Tab(child: Text('TCP/UDP')),
-    ];
+    List<Widget> tabs = [Tab(child: Text(localizations.sequence)), Tab(child: Text(localizations.domainList))];
 
     //double click scroll to top
     var tabClickHandles = [
       DoubleClickHandle(handle: () => requestSequenceKey.currentState?.scrollToTop()),
-      DoubleClickHandle(handle: () => domainListKey.currentState?.scrollToTop()),
-      DoubleClickHandle(handle: () => packetSequenceKey.currentState?.scrollToTop()),
+      DoubleClickHandle(handle: () => domainListKey.currentState?.scrollToTop())
     ];
 
-    return Scaffold(
+    return DefaultTabController(
+        length: tabs.length,
+        child: Scaffold(
           appBar: AppBar(
-              title: TabBar(controller: _tabController, tabs: tabs, onTap: (index) => tabClickHandles[index].call()),
+              title: TabBar(tabs: tabs, onTap: (index) => tabClickHandles[index].call()),
               automaticallyImplyLeading: false),
           body: TabBarView(
-            controller: _tabController,
             children: [
               RequestSequence(
                   key: requestSequenceKey,
@@ -121,10 +106,9 @@ class RequestListState extends State<RequestListWidget> with SingleTickerProvide
                   selectionController: widget.selectionController),
               DomainList(
                   key: domainListKey, list: container, proxyServer: widget.proxyServer, onRemove: domainListRemove),
-              RawPacketSequence(key: packetSequenceKey),
             ],
           ),
-        );
+        ));
   }
 
   ///添加请求
