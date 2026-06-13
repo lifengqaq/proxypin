@@ -203,7 +203,10 @@ class MobileHomeState extends State<MobileHomePage> implements EventListener, Li
     var navigationView = [
       NavigatorPage(
           navigatorKey: requestPageNavigatorKey,
-          child: RequestPage(proxyServer: proxyServer, appConfiguration: widget.appConfiguration, onOpenTcp: () => _selectIndex.value = 0)),
+          child: RequestPage(proxyServer: proxyServer, appConfiguration: widget.appConfiguration, onOpenTcp: () {
+            _selectIndex.value = 0;
+            tabNotifier.value = 2;
+          })),
       NavigatorPage(
           navigatorKey: toolboxNavigatorKey,
           child: Scaffold(

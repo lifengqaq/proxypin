@@ -1,6 +1,7 @@
 package com.network.proxy.vpn
 
 import android.util.Log
+import com.network.proxy.plugin.PacketCapturePlugin
 import com.network.proxy.vpn.Connection.Companion.getConnectionKey
 import com.network.proxy.vpn.socket.ClientPacketWriter
 import com.network.proxy.vpn.socket.SocketNIODataService
@@ -70,6 +71,18 @@ class ConnectionHandler(
     @Throws(IOException::class)
     private fun handleUDPPacket(clientPacketData: ByteBuffer, ipHeader: IP4Header) {
         val udpHeader = UDPPacketFactory.createUDPHeader(clientPacketData)
+        // 转发到 Flutter
+        val pos = clientPacketData.position()
+        val remaining = clientPacketData.remaining()
+        val payload = ByteArray(remaining)
+        clientPacketData.get(payload)
+        clientPacketData.position(pos)
+        PacketCapturePlugin.instance?.forwardPacket(
+            "UDP",
+            PacketUtil.intToIPAddress(ipHeader.sourceIP), udpHeader.sourcePort,
+            PacketUtil.intToIPAddress(ipHeader.destinationIP), udpHeader.destinationPort,
+            "outgoing", payload
+        )
         var connection = manager.getConnection(
             Protocol.UDP,
             ipHeader.destinationIP, udpHeader.destinationPort,
@@ -276,6 +289,25 @@ class ConnectionHandler(
         val destinationIP = ip4Header.destinationIP
         val sourcePort = tcpHeader.getSourcePort()
         val destinationPort = tcpHeader.getDestinationPort()
+        // 转发到 Flutter
+        if (dataLength > 0) {
+            val pos = clientPacketData.position()
+            val payload = ByteArray(dataLength)
+            clientPacketData.get(payload)
+            clientPacketData.position(pos)
+            PacketCapturePlugin.instance?.forwardPacket(
+                "TCP",
+                PacketUtil.intToIPAddress(sourceIP), sourcePort,
+                PacketUtil.intToIPAddress(destinationIP), destinationPort,
+                "outgoing", payload,
+                seqNum = tcpHeader.sequenceNumber,
+                ackNum = tcpHeader.ackNumber,
+                syn = tcpHeader.isSYN(),
+                fin = tcpHeader.isFIN(),
+                rst = tcpHeader.isRST(),
+                psh = tcpHeader.isPSH()
+            )
+        }
         if (tcpHeader.isSYN()) {
             // 3-way handshake + create new session
             replySynAck(ip4Header, tcpHeader)

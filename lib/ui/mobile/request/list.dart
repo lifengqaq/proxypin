@@ -34,6 +34,9 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../component/model/search_model.dart';
 
+/// 请求列表内部 Tab 切换通知
+final ValueNotifier<int> tabNotifier = ValueNotifier(0);
+
 /// 请求列表
 /// @author wanghongen
 class RequestListWidget extends StatefulWidget {
@@ -49,7 +52,7 @@ class RequestListWidget extends StatefulWidget {
   }
 }
 
-class RequestListState extends State<RequestListWidget> {
+class RequestListState extends State<RequestListWidget> with SingleTickerProviderStateMixin {
   final GlobalKey<RequestSequenceState> requestSequenceKey = GlobalKey<RequestSequenceState>();
   final GlobalKey<DomainListState> domainListKey = GlobalKey<DomainListState>();
   final GlobalKey<RawPacketSequenceState> packetSequenceKey = GlobalKey<RawPacketSequenceState>();
@@ -57,18 +60,33 @@ class RequestListState extends State<RequestListWidget> {
   //请求列表容器
   ListenableList<HttpRequest> container = ListenableList();
 
+  late final TabController _tabController;
+  VoidCallback? _tabListener;
+
   AppLocalizations get localizations => AppLocalizations.of(context)!;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 3, vsync: this);
     if (widget.list != null) {
       container = widget.list!;
     }
+    _tabListener = () {
+      final target = tabNotifier.value;
+      if (target >= 0 && target < 3 && _tabController.index != target) {
+        _tabController.animateTo(target);
+      }
+    };
+    tabNotifier.addListener(_tabListener!);
   }
 
   @override
   void dispose() {
+    if (_tabListener != null) {
+      tabNotifier.removeListener(_tabListener!);
+    }
+    _tabController.dispose();
     RequestRowState.removeAutoReadByIds(container.map((request) => request.requestId));
     super.dispose();
   }
@@ -88,13 +106,12 @@ class RequestListState extends State<RequestListWidget> {
       DoubleClickHandle(handle: () => packetSequenceKey.currentState?.scrollToTop()),
     ];
 
-    return DefaultTabController(
-        length: tabs.length,
-        child: Scaffold(
+    return Scaffold(
           appBar: AppBar(
-              title: TabBar(tabs: tabs, onTap: (index) => tabClickHandles[index].call()),
+              title: TabBar(controller: _tabController, tabs: tabs, onTap: (index) => tabClickHandles[index].call()),
               automaticallyImplyLeading: false),
           body: TabBarView(
+            controller: _tabController,
             children: [
               RequestSequence(
                   key: requestSequenceKey,
@@ -107,7 +124,7 @@ class RequestListState extends State<RequestListWidget> {
               RawPacketSequence(key: packetSequenceKey),
             ],
           ),
-        ));
+        );
   }
 
   ///添加请求
