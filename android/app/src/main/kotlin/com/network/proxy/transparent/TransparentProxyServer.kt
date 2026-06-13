@@ -175,33 +175,36 @@ class TransparentProxyServer(private val proxyPort: Int) {
     }
 
     private fun setupIptables() {
-        try {
-            // 清除旧规则
-            Runtime.getRuntime().exec(arrayOf("su", "-c", "$IPTABLES_CMD -t nat -F proxy_pin 2>/dev/null"))
-            Runtime.getRuntime().exec(arrayOf("su", "-c", "$IPTABLES_CMD -t nat -X proxy_pin 2>/dev/null"))
-
-            // 创建自定义链 + 规则
-            Runtime.getRuntime().exec(arrayOf("su", "-c", "$IPTABLES_CMD -t nat -N proxy_pin"))
-            // 绕过本地代理端口
-            Runtime.getRuntime().exec(arrayOf("su", "-c", "$IPTABLES_CMD -t nat -A proxy_pin -p tcp --dport $proxyPort -j RETURN"))
-            Runtime.getRuntime().exec(arrayOf("su", "-c", "$IPTABLES_CMD -t nat -A proxy_pin -p tcp --dport $listenPort -j RETURN"))
-            // 重定向到透明代理
-            Runtime.getRuntime().exec(arrayOf("su", "-c", "$IPTABLES_CMD -t nat -A proxy_pin -p tcp -j REDIRECT --to-port $listenPort"))
-            // 加入 OUTPUT 链
-            Runtime.getRuntime().exec(arrayOf("su", "-c", "$IPTABLES_CMD -t nat -A OUTPUT -j proxy_pin"))
-
-            Log.i(TAG, "iptables rules set up (nat OUTPUT redirect to $listenPort)")
-        } catch (e: Exception) {
-            Log.e(TAG, "iptables setup failed: ${e.message}")
-        }
+        // 合并成一条命令顺序执行，避免并行竞态
+        val cmds = listOf(
+            "$IPTABLES_CMD -t nat -F proxy_pin 2>/dev/null",
+            "$IPTABLES_CMD -t nat -X proxy_pin 2>/dev/null",
+            "$IPTABLES_CMD -t nat -N proxy_pin",
+            "$IPTABLES_CMD -t nat -A proxy_pin -p tcp --dport $proxyPort -j RETURN",
+            "$IPTABLES_CMD -t nat -A proxy_pin -p tcp --dport $listenPort -j RETURN",
+            "$IPTABLES_CMD -t nat -A proxy_pin -p tcp -j REDIRECT --to-port $listenPort",
+            "$IPTABLES_CMD -t nat -A OUTPUT -j proxy_pin"
+        )
+        execSu(cmds.joinToString("; "))
+        Log.i(TAG, "iptables rules set up (nat OUTPUT redirect to $listenPort)")
     }
 
     private fun removeIptables() {
-        try {
-            Runtime.getRuntime().exec(arrayOf("su", "-c", "$IPTABLES_CMD -t nat -D OUTPUT -j proxy_pin 2>/dev/null"))
-            Runtime.getRuntime().exec(arrayOf("su", "-c", "$IPTABLES_CMD -t nat -F proxy_pin 2>/dev/null"))
-            Runtime.getRuntime().exec(arrayOf("su", "-c", "$IPTABLES_CMD -t nat -X proxy_pin 2>/dev/null"))
-            Log.i(TAG, "iptables rules removed")
-        } catch (_: Exception) {}
+        val cmds = listOf(
+            "$IPTABLES_CMD -t nat -D OUTPUT -j proxy_pin 2>/dev/null",
+            "$IPTABLES_CMD -t nat -F proxy_pin 2>/dev/null",
+            "$IPTABLES_CMD -t nat -X proxy_pin 2>/dev/null"
+        )
+        try { execSu(cmds.joinToString("; ")) } catch (_: Exception) {}
+        Log.i(TAG, "iptables rules removed")
+    }
+
+    private fun execSu(cmd: String) {
+        val proc = Runtime.getRuntime().exec(arrayOf("su", "-c", cmd))
+        val exitCode = proc.waitFor()
+        if (exitCode != 0) {
+            val err = proc.errorStream.bufferedReader().readText()
+            throw Exception("su exit=$exitCode: $err")
+        }
     }
 }
