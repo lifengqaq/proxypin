@@ -78,7 +78,7 @@ class TransparentProxyServer(private val proxyPort: Int) {
                 return
             }
 
-            Log.d(TAG, "Connection from ${client.inetAddress}:${client.port} -> ${originalDest.host}:${originalDest.port}")
+            Log.d(TAG, "Connection from ${client.inetAddress}:${client.port} -> ${originalDest.hostString}:${originalDest.port}")
 
             // 连接到 Flutter 代理
             val proxy = Socket().also {
@@ -86,7 +86,7 @@ class TransparentProxyServer(private val proxyPort: Int) {
             }
 
             // 发送原始目标信息（HTTP CONNECT 方式）
-            val preamble = "CONNECT ${originalDest.host}:${originalDest.port} HTTP/1.0\r\n" +
+            val preamble = "CONNECT ${originalDest.hostString}:${originalDest.port} HTTP/1.0\r\n" +
                     "X-Transparent: 1\r\n" +
                     "\r\n"
             proxy.getOutputStream().write(preamble.toByteArray())
@@ -135,9 +135,10 @@ class TransparentProxyServer(private val proxyPort: Int) {
         try {
             File("/proc/net/tcp").bufferedReader().use { reader ->
                 reader.readLine() // skip header
-                reader.forEachLine { line ->
-                    val parts = line.trim().split("\\s+".toRegex())
-                    if (parts.size < 10) return@forEachLine
+                var line: String?
+                while (reader.readLine().also { line = it } != null) {
+                    val parts = line!!.trim().split("\\s+".toRegex())
+                    if (parts.size < 10) continue
 
                     val localAddr = parseAddress(parts[1]) // original destination
                     val remAddr = parseAddress(parts[2])   // source (the app)
