@@ -23,8 +23,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.27'
-          channel: 'stable'
+          channel: 'beta'
           cache: true
 
       - name: Create dummy keystore for CI
@@ -72,8 +71,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.27'
-          channel: 'stable'
+          channel: 'beta'
           cache: true
 
       - name: Create dummy keystore for CI
